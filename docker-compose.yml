@@ -1,0 +1,68 @@
+services:
+  postgres:
+    image: postgres:alpine
+    container_name: order_postgresql
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ${DB_NAME}
+    ports:
+      - "${DB_PORT}:5432"
+    expose:
+      - 5432
+    volumes:
+      - order_pg_data:/var/lib/postgresql/data
+
+  zookeeper:
+    image: bitnami/zookeeper:latest
+    container_name: order_zookeeper
+    expose:
+      - "2181"
+    environment:
+      - ALLOW_ANONYMOUS_LOGIN=yes
+    volumes:
+      - order_kafka_zoo_data:/bitnami/zookeeper
+
+  kafka:
+    image: bitnami/kafka:3.5
+    container_name: order_kafka
+    expose:
+      - "9092"
+    ports:
+      - "9093:9093"
+    environment:
+      - KAFKA_BROKER_ID=1
+      - KAFKA_CFG_LISTENERS=PLAINTEXT://:9092,EXTERNAL://:9093
+      - KAFKA_CFG_ADVERTISED_LISTENERS=PLAINTEXT://kafka:9092,EXTERNAL://localhost:9093
+      - KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP=PLAINTEXT:PLAINTEXT,EXTERNAL:PLAINTEXT
+      - KAFKA_CFG_ZOOKEEPER_CONNECT=zookeeper:2181
+      - ALLOW_PLAINTEXT_LISTENER=yes
+    depends_on:
+      - zookeeper
+    volumes:
+      - order_kafka_data:/bitnami/kafka
+
+  kafdrop:
+    image: obsidiandynamics/kafdrop:3.27.0
+    container_name: order_kafkadrop
+    ports:
+      - "9000:9000"
+    environment:
+      - KAFKA_BROKER_CONNECT=kafka:9092
+      - SERVER_PORT=9000
+      - MANAGEMENT_HEALTH_PROBES_ENABLED=true
+      - FREEMARKER_TEMPLATES_DEBUG=false
+    depends_on:
+      - kafka
+
+volumes:
+  order_pg_data:
+  order_redis_data:
+  order_kafka_zoo_data:
+  order_kafka_data:
+
+networks:
+  default:
+    name: internal_vpc
+    external: true
