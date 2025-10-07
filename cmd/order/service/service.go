@@ -36,6 +36,33 @@ func (s *OrderService) SaveIdempontency(ctx context.Context, token string) error
 	return nil
 }
 
+func (s *OrderService) GetOrderInfoByOrderID(ctx context.Context, orderID int64) (models.Order, error) {
+	order, err := s.OrderRepository.GetOrderInfoByOrderID(ctx, orderID)
+	if err != nil {
+		return models.Order{}, err
+	}
+
+	return order, nil
+}
+
+func (s *OrderService) GetOrderDetailByID(ctx context.Context, orderDetailID int64) (models.OrderDetail, error) {
+	orderDetail, err := s.OrderRepository.GetOrderDetailByID(ctx, orderDetailID)
+	if err != nil {
+		return models.OrderDetail{}, err
+	}
+
+	return orderDetail, nil
+}
+
+func (s *OrderService) UpdateOrderStatus(ctx context.Context, orderID int64, status int) error {
+	err := s.OrderRepository.UpdateOrderStatus(ctx, orderID, status)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func (s *OrderService) SaveOrderAndOrderDetail(ctx context.Context, order *models.Order, orderDetail *models.OrderDetail) (int64, error) {
 	var orderID int64
 

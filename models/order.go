@@ -3,14 +3,14 @@ package models
 import "time"
 
 type Order struct {
-	ID              int64
-	UserID          int64
-	OrderDetailID   int64
-	Amount          float64
-	TotalQty        int
-	Status          int
-	PaymentMethod   string
-	ShippingAddress string
+	ID              int64   `json:"id"`
+	UserID          int64   `json:"user_id"`
+	OrderDetailID   int64   `json:"order_detail_id"`
+	Amount          float64 `json:"amount"`
+	TotalQty        int     `json:"total_qtr"`
+	Status          int     `json:"status"`
+	PaymentMethod   string  `json:"payment_method"`
+	ShippingAddress string  `json:"shipping_address"`
 }
 
 type OrderDetail struct {

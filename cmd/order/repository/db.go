@@ -38,6 +38,26 @@ func (r *OrderRepository) WithTransaction(ctx context.Context, fn func(tx *gorm.
 	if error => rollback
 */
 
+func (r *OrderRepository) GetOrderInfoByOrderID(ctx context.Context, orderID int64) (models.Order, error) {
+	var result models.Order
+	err := r.Database.Table("orders").WithContext(ctx).Where("order_id = ?", orderID).Find(&result).Error
+	if err != nil {
+		return models.Order{}, err
+	}
+
+	return result, nil
+}
+
+func (r *OrderRepository) GetOrderDetailByID(ctx context.Context, orderDetailID int64) (models.OrderDetail, error) {
+	var result models.OrderDetail
+	err := r.Database.Table("order_detail").WithContext(ctx).Where("id = ?", orderDetailID).Find(&result).Error
+	if err != nil {
+		return models.OrderDetail{}, err
+	}
+
+	return result, nil
+}
+
 func (r *OrderRepository) InsertOrderTx(ctx context.Context, tx *gorm.DB, order *models.Order) error {
 	err := tx.WithContext(ctx).Table("orders").Create(order).Error
 
@@ -72,6 +92,19 @@ func (r *OrderRepository) SaveIdempontency(ctx context.Context, token string) er
 	}
 
 	err := r.Database.WithContext(ctx).Table("order_request_log").Create(&log).Error
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (r *OrderRepository) UpdateOrderStatus(ctx context.Context, orderID int64, status int) error {
+	err := r.Database.Table("orders").WithContext(ctx).Model(&models.Order{}).Updates(map[string]interface{}{
+		"status":      status,
+		"update_time": time.Now(),
+	}).Where("order_id = ?", orderID).Error
+
 	if err != nil {
 		return err
 	}
