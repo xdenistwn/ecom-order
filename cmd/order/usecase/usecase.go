@@ -95,12 +95,41 @@ func (uc *OrderUsecase) CheckoutOrder(ctx context.Context, param *models.Checkou
 		ShippingAddress: param.ShippingAddress,
 	}
 
-	err = uc.KafkaProducer.PublishOrderCreated(ctx, orderCreatedEvent)
-	if err != nil {
-		return 0, nil
+	go func(ctx context.Context) {
+		if err := uc.KafkaProducer.PublishOrderCreated(ctx, orderCreatedEvent); err != nil {
+			fmt.Println("Failed publish order created event:", err)
+		} else {
+			fmt.Println("Successfully publish order created event for Order ID:", orderID)
+		}
+	}(context.Background())
+
+	updateStockEvent := models.ProductStockUpdateEvent{
+		OrderID:   orderID,
+		Products:  convertCheckoutItemToProductItems(param.Items),
+		EventTime: time.Now(),
 	}
 
+	go func(ctx context.Context) {
+		if err := uc.KafkaProducer.PublishProductStockUpdate(ctx, updateStockEvent); err != nil {
+			fmt.Println("Failed publish product stock update event:", err)
+		} else {
+			fmt.Println("Successfully publish product stock update event for Order ID:", orderID)
+		}
+	}(context.Background())
+
 	return orderID, nil
+}
+
+func convertCheckoutItemToProductItems(items []models.CheckoutItem) []models.ProductItem {
+	result := make([]models.ProductItem, 0, len(items))
+
+	for index, item := range items {
+		result[index] = models.ProductItem{
+			ProductID: item.ProductID,
+			Qty:       item.Quantity,
+		}
+	}
+	return result
 }
 
 func (uc *OrderUsecase) validateProduct(ctx context.Context, items []models.CheckoutItem) error {

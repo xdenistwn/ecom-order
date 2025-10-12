@@ -11,6 +11,7 @@ import (
 	"order/config"
 	"order/infrastructure/log"
 	"order/kafka"
+	kafkaConsumer "order/kafka/consumer"
 	"order/routes"
 
 	"github.com/gin-gonic/gin"
@@ -25,7 +26,7 @@ func main() {
 
 	// kafka producer init
 	kafkaHost := fmt.Sprintf("%s:%s", cfg.Kafka.Host, cfg.App.Port)
-	kafkaProducer := kafka.NewKafkaProducer([]string{kafkaHost}, "order.created")
+	kafkaProducer := kafka.NewKafkaProducer([]string{kafkaHost})
 	defer kafkaProducer.Close()
 
 	// setup logger
@@ -43,8 +44,11 @@ func main() {
 	router.Run(":" + port)
 
 	// kafka consumer
-	kafkaPaymentSuccessConsumer := kafka.NewPaymentSuccessConsumer([]string{"localhost:9093"}, "payment.success", *orderService, *kafkaProducer)
+	kafkaPaymentSuccessConsumer := kafkaConsumer.NewPaymentSuccessConsumer([]string{"localhost:9093"}, "payment.success", *orderService, *kafkaProducer)
 	kafkaPaymentSuccessConsumer.Start(context.Background())
+
+	kafkaPaymentFailedConsumer := kafkaConsumer.NewPaymentFailedConsumer([]string{"localhost:9093"}, "payment.failed", *orderService, *kafkaProducer)
+	kafkaPaymentFailedConsumer.Start(context.Background())
 
 	log.Logger.Printf("Server listening on port: %s", port)
 }

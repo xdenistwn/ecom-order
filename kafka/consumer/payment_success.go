@@ -1,4 +1,4 @@
-package kafka
+package consumer
 
 import (
 	"context"
@@ -6,19 +6,19 @@ import (
 	"order/cmd/order/service"
 	"order/infrastructure/constant"
 	"order/infrastructure/log"
+	kafkaOrder "order/kafka"
 	"order/models"
-	"time"
 
 	"github.com/segmentio/kafka-go"
 )
 
 type PaymentSuccessConsumer struct {
 	Reader       *kafka.Reader
-	Producer     KafkaProducer
+	Producer     kafkaOrder.KafkaProducer
 	OrderService service.OrderService
 }
 
-func NewPaymentSuccessConsumer(brokers []string, topic string, orderService service.OrderService, kafkaProducer KafkaProducer) *PaymentSuccessConsumer {
+func NewPaymentSuccessConsumer(brokers []string, topic string, orderService service.OrderService, kafkaProducer kafkaOrder.KafkaProducer) *PaymentSuccessConsumer {
 	reader := kafka.NewReader(kafka.ReaderConfig{
 		Brokers: brokers,
 		Topic:   topic,
@@ -42,7 +42,7 @@ func (c *PaymentSuccessConsumer) Start(ctx context.Context) {
 			continue
 		}
 
-		var event models.PaymentSuccessEvent
+		var event models.PaymentUpdateStatusEvent
 		err = json.Unmarshal(message.Value, &event)
 		if err != nil {
 			log.Logger.Println("[KAFKA] EArror Unmarshal event message value: ", err)
@@ -58,34 +58,34 @@ func (c *PaymentSuccessConsumer) Start(ctx context.Context) {
 			continue
 		}
 
-		// get order info from db
-		order, err := c.OrderService.GetOrderInfoByOrderID(ctx, event.OrderID)
-		if err != nil {
-			log.Logger.Println("[KAFKA] Error get order info by order id")
-			continue
-		}
+		// // get order info from db
+		// order, err := c.OrderService.GetOrderInfoByOrderID(ctx, event.OrderID)
+		// if err != nil {
+		// 	log.Logger.Println("[KAFKA] Error get order info by order id")
+		// 	continue
+		// }
 
-		// get order detail from db
-		orderDetail, err := c.OrderService.GetOrderDetailByID(ctx, order.OrderDetailID)
-		if err != nil {
-			log.Logger.Println("[KAFKA] Error get order detail by id")
-			continue
-		}
+		// // get order detail from db
+		// orderDetail, err := c.OrderService.GetOrderDetailByID(ctx, order.OrderDetailID)
+		// if err != nil {
+		// 	log.Logger.Println("[KAFKA] Error get order detail by id")
+		// 	continue
+		// }
 
-		// get product list from order detail
-		var products []models.CheckoutItem
-		err = json.Unmarshal([]byte(orderDetail.Products), &products)
-		if err != nil {
-			log.Logger.Println("[KAFKA] Error unmarshal product list from order detail")
-			continue
-		}
+		// // get product list from order detail
+		// var products []models.CheckoutItem
+		// err = json.Unmarshal([]byte(orderDetail.Products), &products)
+		// if err != nil {
+		// 	log.Logger.Println("[KAFKA] Error unmarshal product list from order detail")
+		// 	continue
+		// }
 
-		// public event product service
-		err = c.Producer.PublishProductStockUpdate(ctx, models.ProductStockUpdateEvent{
-			OrderID:   event.OrderID,
-			Products:  convertCheckoutItemsToProductItems(products),
-			EventTime: time.Now(),
-		})
+		// // public event product service
+		// err = c.Producer.PublishProductStockUpdate(ctx, models.ProductStockUpdateEvent{
+		// 	OrderID:   event.OrderID,
+		// 	Products:  convertCheckoutItemsToProductItems(products),
+		// 	EventTime: time.Now(),
+		// })
 	}
 }
 

@@ -13,11 +13,10 @@ type KafkaProducer struct {
 	Writer *kafka.Writer
 }
 
-func NewKafkaProducer(brokers []string, topic string) *KafkaProducer {
+func NewKafkaProducer(brokers []string) *KafkaProducer {
 	return &KafkaProducer{
 		Writer: &kafka.Writer{
 			Addr:     kafka.TCP(brokers...),
-			Topic:    topic,
 			Balancer: &kafka.LeastBytes{},
 		},
 	}
@@ -36,6 +35,7 @@ func (p *KafkaProducer) PublishOrderCreated(ctx context.Context, event models.Or
 	msg := kafka.Message{
 		Key:   []byte(fmt.Sprintf("order-%d", event.OrderID)),
 		Value: value,
+		Topic: "order.created",
 	}
 
 	return p.Writer.WriteMessages(ctx, msg)
@@ -50,6 +50,22 @@ func (p *KafkaProducer) PublishProductStockUpdate(ctx context.Context, event mod
 	msg := kafka.Message{
 		Key:   []byte(fmt.Sprintf("order-%d", event.OrderID)),
 		Value: value,
+		Topic: "stock.update",
+	}
+
+	return p.Writer.WriteMessages(ctx, msg)
+}
+
+func (p *KafkaProducer) PublishProductStockRollback(ctx context.Context, event models.ProductStockUpdateEvent) error {
+	value, err := json.Marshal(event)
+	if err != nil {
+		return err
+	}
+
+	msg := kafka.Message{
+		Key:   []byte(fmt.Sprintf("order-%d", event.OrderID)),
+		Value: value,
+		Topic: "stock.rollback",
 	}
 
 	return p.Writer.WriteMessages(ctx, msg)
